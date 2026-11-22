@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Art Team Oversight Dashboard</title>
+<style>
+  :root{
+    --bg:#f3f5f9; --card:#ffffff; --ink:#18202f; --muted:#5a6478; --line:#dce1ea;
+    --brand:#1f5eff; --brand-d:#1748c9; --brand-bg:#e8efff;
+    --green:#0f7a46; --green-bg:#e2f5eb; --red:#b42318; --red-bg:#fdeceb;
+    --amber:#8a5300; --amber-bg:#fff3d9; --grey-bg:#eceff3; --radius:14px;
+    --shadow:0 1px 2px rgba(16,24,40,.06),0 2px 8px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.45}
+  button,input,select,textarea{font:inherit;color:inherit}
+  a{color:var(--brand)}
+  .wrap{max-width:1240px;margin:0 auto;padding:20px 16px 60px}
+  [hidden]{display:none !important}
+
+  /* Header */
+  header.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between;margin-bottom:18px}
+  .title h1{margin:0;font-size:28px;letter-spacing:-.01em}
+  .title p{margin:2px 0 0;color:var(--muted);font-size:15px}
+  .top-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .who{color:var(--muted);font-size:14px;font-weight:600}
+
+  .btn{border:1px solid var(--line);background:#fff;padding:11px 16px;border-radius:10px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-height:44px}
+  .btn:hover{background:#f7f8fb}
+  .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  .btn.primary:hover{background:var(--brand-d)}
+  .btn.danger{color:var(--red);border-color:#f3c5c1}
+  .btn.danger:hover{background:var(--red-bg)}
+  .btn.small{padding:7px 12px;min-height:36px;font-size:14px}
+
+  /* Login */
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px 14px}
+  .login-card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);width:100%;max-width:420px;padding:28px 26px}
+  .login-card h1{margin:0 0 4px;font-size:24px}
+  .login-card p{margin:0 0 18px;color:var(--muted);font-size:15px}
+  .login-card .field{margin-bottom:14px}
+  .login-err{background:var(--red-bg);color:var(--red);border:1px solid #f3c5c1;border-radius:10px;padding:11px 13px;font-weight:600;font-size:15px;margin-bottom:14px}
+  .config-err{background:var(--amber-bg);color:var(--amber);border:1px solid #f2d79c;border-radius:10px;padding:11px 13px;font-weight:600;font-size:15px;margin-bottom:14px}
+
+  /* Summary */
+  .summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);text-align:left;cursor:pointer}
+  .stat:hover{border-color:#b9c4d6}
+  .stat .num{font-size:32px;font-weight:800;line-height:1.1}
+  .stat .lbl{font-size:15px;color:var(--muted);font-weight:600;margin-top:2px}
+  .stat.s-signed .num{color:var(--brand)}
+  .stat.s-live .num{color:var(--green)}
+  .stat.s-alert .num{color:var(--red)}
+  .stat.s-unpaid .num{color:var(--amber)}
+
+  /* Toolbar */
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px}
+  .search{flex:1 1 260px;position:relative}
+  .search input{width:100%;padding:12px 14px 12px 42px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:17px;min-height:48px}
+  .search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);opacity:.5}
+  .filters{display:flex;flex-wrap:wrap;gap:6px;background:#e6eaf1;padding:4px;border-radius:12px}
+  .filters button{border:0;background:transparent;padding:9px 14px;border-radius:9px;font-weight:600;cursor:pointer;color:var(--muted);min-height:40px}
+  .filters button.on{background:#fff;color:var(--ink);box-shadow:var(--shadow)}
+  .selfilter{display:flex;gap:8px;flex-wrap:wrap}
+  .selfilter select{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-weight:600;min-height:44px}
+  .viewtabs{display:flex;gap:6px;background:#dbe4f5;padding:4px;border-radius:12px;margin-bottom:14px}
+  .viewtabs button{flex:1;border:0;background:transparent;padding:11px 14px;border-radius:9px;font-weight:700;cursor:pointer;color:var(--brand-d);min-height:44px;font-size:16px}
+  .viewtabs button.on{background:#fff;color:var(--ink);box-shadow:var(--shadow)}
+
+  /* Cards */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+  .card-body{padding:16px 18px;display:flex;flex-direction:column;gap:12px;flex:1}
+  .card h3{margin:0;font-size:20px;line-height:1.25}
+  .contact{color:var(--muted);font-size:15px;margin-top:2px}
+  .links{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:15px}
+  .links a{text-decoration:none;font-weight:600;word-break:break-all}
+
+  .reasons{background:var(--red-bg);border:1px solid #f3c5c1;border-radius:10px;padding:10px 12px}
+  .reasons strong{color:var(--red);font-size:14px;text-transform:uppercase;letter-spacing:.04em}
+  .reasons ul{margin:6px 0 0;padding-left:18px;font-size:15px;font-weight:600}
+  .stall{background:var(--amber-bg);border:1px solid #f2d79c;color:var(--amber);border-radius:9px;padding:8px 11px;font-size:14px;font-weight:600}
+
+  .checks{display:grid;gap:6px}
+  .check{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:15px;padding:7px 10px;border-radius:9px;background:#f6f7fa}
+  .badge{font-weight:700;font-size:13px;padding:3px 10px;border-radius:999px;white-space:nowrap;text-align:center}
+  .badge.good{background:var(--green-bg);color:var(--green)}
+  .badge.bad{background:var(--red-bg);color:var(--red)}
+  .badge.warn{background:var(--amber-bg);color:var(--amber)}
+  .badge.neutral{background:var(--grey-bg);color:var(--muted)}
+
+  .facts{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:15px;margin:0}
+  .facts dt{color:var(--muted);font-weight:600}
+  .facts dd{margin:0}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:var(--brand-bg);color:#1a3fa6;font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:6px}
+  .chip button{border:0;background:transparent;cursor:pointer;font-size:16px;line-height:1;padding:0;color:#1a3fa6}
+  .muted{color:var(--muted)}
+  .notes{background:#fbfaf5;border:1px solid #efe9d6;border-radius:9px;padding:9px 11px;font-size:14px;white-space:pre-wrap;word-break:break-word}
+  .card-actions{display:flex;gap:8px;padding:0 18px 16px}
+  .card-actions .btn{flex:1;justify-content:center}
+
+  .empty-state{grid-column:1/-1;text-align:center;padding:50px 20px;background:#fff;border:1px dashed var(--line);border-radius:var(--radius);color:var(--muted)}
+  .empty-state strong{display:block;color:var(--ink);font-size:19px;margin-bottom:6px}
+
+  footer.note{margin-top:28px;color:var(--muted);font-size:14px;text-align:center}
+  .errbar{background:var(--red-bg);color:var(--red);border:1px solid #f3c5c1;padding:12px 14px;border-radius:10px;margin-bottom:14px;font-weight:600}
+
+  /* Modal */
+  .overlay{position:fixed;inset:0;background:rgba(15,20,30,.55);display:none;align-items:flex-start;justify-content:center;padding:30px 14px;overflow-y:auto;z-index:50}
+  .overlay.open{display:flex}
+  .modal{background:#fff;border-radius:16px;width:100%;max-width:760px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+  .modal-head{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;border-radius:16px 16px 0 0;z-index:2}
+  .modal-head h2{margin:0;font-size:22px}
+  .x{border:0;background:#f1f3f7;width:40px;height:40px;border-radius:10px;font-size:22px;cursor:pointer}
+  .modal-body{padding:20px 22px;display:grid;gap:18px}
+  .modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 22px;border-top:1px solid var(--line);position:sticky;bottom:0;background:#fff;border-radius:0 0 16px 16px}
+  fieldset{border:1px solid var(--line);border-radius:12px;padding:14px 16px 16px;margin:0}
+  legend{font-weight:800;font-size:15px;padding:0 6px;color:var(--brand-d);text-transform:uppercase;letter-spacing:.04em}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-weight:700;font-size:16px}
+  .field .hint{font-size:13px;color:var(--muted);font-weight:400}
+  .field input,.field select,.field textarea{border:1px solid #c9d0dc;border-radius:10px;padding:11px 12px;font-size:16px;background:#fff;min-height:46px;width:100%}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:3px solid #c9d8ff;border-color:var(--brand)}
+  .field input:disabled{background:#f2f4f7;color:#98a1b2}
+  textarea{min-height:90px;resize:vertical}
+  .req{color:var(--red)}
+  .loc-entry{display:flex;gap:8px}
+  .loc-entry input{flex:1}
+
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#18202f;color:#fff;padding:12px 18px;border-radius:10px;font-weight:600;opacity:0;transition:.25s;z-index:80;pointer-events:none;max-width:90vw;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (max-width:600px){
+    .wrap{padding:14px 12px 50px}
+    .title h1{font-size:24px}
+    .top-actions{width:100%}
+    .top-actions .btn{flex:1;justify-content:center}
+    .grid{grid-template-columns:1fr}
+    .row,.row3{grid-template-columns:1fr}
+    .overlay{padding:0}
+    .modal{border-radius:0;min-height:100vh}
+    .modal-head,.modal-foot{border-radius:0}
+    .filters{width:100%}
+    .filters button{flex:1}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div class="login-wrap" id="loginView">
+  <form class="login-card" id="loginForm" novalidate>
+    <h1>Art Team Oversight Dashboard</h1>
+    <p>Sign in to see the shared, live board. Everyone who signs in sees the same data.</p>
+    <div class="config-err" id="configErr" hidden>This dashboard isn't connected yet. The Supabase project URL and anon key still need to be pasted into this file (the two constants at the top of the script) before anyone can sign in.</div>
+    <div class="login-err" id="loginErr" hidden></div>
+    <div class="field">
+      <label for="liEmail">Email</label>
+      <input id="liEmail" type="email" autocomplete="username" required>
+    </div>
+    <div class="field">
+      <label for="liPassword">Password</label>
+      <input id="liPassword" type="password" autocomplete="current-password" required>
+    </div>
+    <button type="submit" class="btn primary" id="loginBtn" style="width:100%;justify-content:center">Sign In</button>
+  </form>
+</div>
+
+<!-- ============ APP ============ -->
+<div class="wrap" id="appView" hidden>
+  <header class="top">
+    <div class="title">
+      <h1>Art Team Oversight Dashboard</h1>
+      <p>Every customer, from agreement to live on TV — one shared board for the whole team.</p>
+    </div>
+    <div class="top-actions">
+      <span class="who" id="whoami"></span>
+      <button class="btn primary" id="addBtn">＋ Add Customer</button>
+      <button class="btn" id="refreshBtn">↻ Refresh</button>
+      <button class="btn" id="exportBtn">⬇ Export Backup</button>
+      <button class="btn" id="importBtn">⬆ Import Backup</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+      <button class="btn" id="signOutBtn">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="errbar" id="appErr" hidden></div>
+
+  <section class="summary">
+    <button class="stat" data-jump="all"><div class="num" id="sTotal">0</div><div class="lbl">Total customers</div></button>
+    <button class="stat s-signed" data-jump="all"><div class="num" id="sSigned">0</div><div class="lbl">Agreements signed</div></button>
+    <button class="stat s-live" data-jump="notlive"><div class="num" id="sLive">0</div><div class="lbl">Ads live on TV</div></button>
+    <button class="stat s-alert" data-jump="attention"><div class="num" id="sPaidNotLive">0</div><div class="lbl">Paid but not live</div></button>
+    <button class="stat s-unpaid" data-jump="unpaid"><div class="num" id="sUnpaid">0</div><div class="lbl">Designer fees unpaid</div></button>
+  </section>
+
+  <div class="viewtabs" role="tablist" aria-label="View">
+    <button data-view="attention" class="on" role="tab">⚠ Needs Attention <span id="cAttention"></span></button>
+    <button data-view="all" role="tab">All Customers <span id="cAll"></span></button>
+  </div>
+
+  <section class="toolbar">
+    <div class="search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input type="search" id="search" placeholder="Search business, contact, or email…" aria-label="Search customers">
+    </div>
+    <div class="filters" role="group" aria-label="Stage filter">
+      <button data-stage="all" class="on">All stages</button>
+      <button data-stage="paidnotlive">Paid, not live</button>
+      <button data-stage="notlive">Not live yet</button>
+      <button data-stage="screenoff">Screen off</button>
+      <button data-stage="unpaid">Fee unpaid</button>
+    </div>
+    <div class="selfilter">
+      <select id="accountFilter" aria-label="Filter by account">
+        <option value="all">All accounts</option>
+        <option>AdSync</option>
+        <option>Wavebuilders</option>
+        <option>Both</option>
+      </select>
+      <select id="locationFilter" aria-label="Filter by location">
+        <option value="all">All locations</option>
+      </select>
+    </div>
+  </section>
+
+  <main class="grid" id="grid"></main>
+
+  <footer class="note">Data lives in the shared Supabase database — changes anyone makes show up for everyone. Export a backup regularly, just in case.</footer>
+</div>
+
+<!-- ============ ADD / EDIT MODAL ============ -->
+<div class="overlay" id="formOverlay">
+  <form class="modal" id="form" novalidate>
+    <div class="modal-head">
+      <h2 id="formTitle">Add Customer</h2>
+      <button type="button" class="x" data-close aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <fieldset>
+        <legend>Customer</legend>
+        <div class="row">
+          <div class="field"><label for="fBusiness">Business name <span class="req">*</span></label><input id="fBusiness" required autocomplete="off"></div>
+          <div class="field"><label for="fContact">Contact name</label><input id="fContact" autocomplete="off"></div>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <div class="field"><label for="fPhone">Phone</label><input id="fPhone" type="tel" autocomplete="off"></div>
+          <div class="field"><label for="fEmail">Email</label><input id="fEmail" type="email" autocomplete="off"></div>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <div class="field"><label for="fAccount">Account</label><select id="fAccount"><option>AdSync</option><option>Wavebuilders</option><option>Both</option></select></div>
+          <div class="field"><label for="fAmount">Amount <span class="hint">(as shown in Square)</span></label><input id="fAmount" autocomplete="off"></div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Agreement &amp; Invoice</legend>
+        <div class="row">
+          <div class="field"><label for="fAgreement">Agreement status</label><select id="fAgreement"><option>Not sent</option><option>Sent–awaiting signature</option><option>Signed</option><option>Draft</option><option>Cancelled</option></select></div>
+          <div class="field"><label for="fInvoice">Invoice status</label><select id="fInvoice"><option>Unknown</option><option>Not sent</option><option>Sent–unpaid</option><option>Overdue</option><option>Partially paid</option><option>Paid</option><option>Canceled</option></select></div>
+        </div>
+        <div class="field" style="margin-top:14px"><label for="fContracts">Contract number(s)</label><input id="fContracts" autocomplete="off" placeholder="e.g. AS 000080; AS 000082"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Progress</legend>
+        <div class="row3">
+          <div class="field"><label for="fWelcome">Welcome email sent?</label><select id="fWelcome"><option>Unknown</option><option>Yes</option><option>No</option></select></div>
+          <div class="field"><label for="fInstructions">Instructions received?</label><select id="fInstructions"><option>Unknown</option><option>Yes</option><option>No</option></select></div>
+          <div class="field"><label for="fCreated">Ad created?</label><select id="fCreated"><option>No</option><option>Yes</option></select></div>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <div class="field"><label for="fLive">Ad live on TV?</label><select id="fLive"><option>Unknown</option><option>Yes</option><option>No</option><option>On playlist — screen off</option></select></div>
+          <div class="field"><label for="fStall">Stall point <span class="hint">(where they're stuck, if known)</span></label><input id="fStall" autocomplete="off"></div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>The Ad</legend>
+        <div class="row">
+          <div class="field"><label for="fType">Ad type</label><select id="fType"><option>Still</option><option>Video</option></select></div>
+          <div class="field"><label for="fSource">Ad source</label><select id="fSource"><option>We create</option><option>Customer provided</option></select></div>
+        </div>
+        <div class="field" style="margin-top:14px">
+          <label for="fLocInput">TV locations <span class="hint">— type a location, then press Enter or Add</span></label>
+          <div class="loc-entry">
+            <input id="fLocInput" list="locList" placeholder="e.g. Noley's - Payson, AZ" autocomplete="off">
+            <button type="button" class="btn small" id="addLoc">Add</button>
+          </div>
+          <datalist id="locList"></datalist>
+          <div class="chips" id="locChips" style="margin-top:6px"></div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Designer Fee ($25)</legend>
+        <div class="row">
+          <div class="field"><label for="fFee">Has the designer been paid?</label><select id="fFee"><option>Unpaid</option><option>Paid</option></select></div>
+          <div class="field"><label for="fFeeDate">Date paid</label><input id="fFeeDate" type="date"></div>
+        </div>
+      </fieldset>
+
+      <div class="field">
+        <label for="fNotes">Notes</label>
+        <textarea id="fNotes" placeholder="Anything the team should know…"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button type="submit" class="btn primary">Save Customer</button>
+    </div>
+  </form>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* ================= CONFIG — paste your Supabase values here =================
+     Supabase Dashboard → Project Settings → API:
+       SUPABASE_URL     = the "Project URL"
+       SUPABASE_ANON_KEY = the "anon" / "public" key
+     These two lines are the ONLY changes needed to connect this file.        */
+  const SUPABASE_URL = "https://esxjqotgyoizclvfhrgr.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzeGpxb3RneW9pemNsdmZocmdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzMTE2NTEsImV4cCI6MjExMDg4NzY1MX0.fQ8-zoAlzjwxOWbcjsY9LVaOfJMVkZz-50K8IMfUEBo";
+  /* ========================================================================== */
+
+  const CONFIG_OK = SUPABASE_URL !== "https://esxjqotgyoizclvfhrgr.supabase.co" && SUPABASE_ANON_KEY !== "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzeGpxb3RneW9pemNsdmZocmdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzMTE2NTEsImV4cCI6MjExMDg4NzY1MX0.fQ8-zoAlzjwxOWbcjsY9LVaOfJMVkZz-50K8IMfUEBo"
+    && /^https:\/\/.+\.supabase\.co/.test(SUPABASE_URL);
+  let sb = null;
+  if (CONFIG_OK && window.supabase) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const TABLE = "customers";
+  const COLUMNS = ["business","contact","email","phone","locations","account","contracts",
+    "agreement_status","invoice_status","amount","welcome_sent","instructions_received",
+    "ad_created","ad_live","ad_type","ad_source","designer_fee","fee_date","stall_point","notes"];
+
+  /* ---------- State ---------- */
+  let customers = [];
+  let view = "attention";           // "attention" | "all"
+  let stage = "all";
+  let query = "";
+  let accountFilter = "all";
+  let locationFilter = "all";
+  let editingId = null;
+  let formLocations = [];
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+  const fmtDate = s => { if(!s) return ""; const p = String(s).split("-").map(Number); if (p.length !== 3) return s; return new Date(p[0], p[1]-1, p[2]).toLocaleDateString(undefined, { month:"short", day:"numeric", year:"numeric" }); };
+
+  function toast(msg){
+    const t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2800);
+  }
+  function showAppError(msg){
+    const b = $("appErr");
+    if (!msg) { b.hidden = true; b.textContent = ""; return; }
+    b.hidden = false; b.textContent = msg;
+  }
+
+  function blank(){
+    return { business:"", contact:"", email:"", phone:"", locations:[], account:"AdSync",
+      contracts:"", agreement_status:"Not sent", invoice_status:"Unknown", amount:"",
+      welcome_sent:"Unknown", instructions_received:"Unknown", ad_created:"No",
+      ad_live:"Unknown", ad_type:"Still", ad_source:"We create",
+      designer_fee:"Unpaid", fee_date:"", stall_point:"", notes:"" };
+  }
+
+  /* ---------- Badges ---------- */
+  function badge(cls, text){ return `<span class="badge ${cls}">${esc(text)}</span>`; }
+  function agreementBadge(v){
+    const map = { "Signed":"good", "Sent–awaiting signature":"warn", "Draft":"neutral", "Cancelled":"bad", "Not sent":"bad" };
+    return badge(map[v] || "neutral", v || "Not sent");
+  }
+  function invoiceBadge(v){
+    const map = { "Paid":"good", "Overdue":"bad", "Partially paid":"warn", "Sent–unpaid":"warn", "Not sent":"warn", "Canceled":"neutral", "Unknown":"neutral" };
+    return badge(map[v] || "neutral", v || "Unknown");
+  }
+  function yesNoBadge(v){
+    if (v === "Yes") return badge("good", "✓ Yes");
+    if (v === "No") return badge("bad", "✗ No");
+    return badge("neutral", "Unknown");
+  }
+  function liveBadge(v){
+    if (v === "Yes") return badge("good", "✓ Live");
+    if (v === "No") return badge("bad", "✗ Not live");
+    if (v === "On playlist — screen off") return badge("warn", "On playlist — screen off");
+    return badge("neutral", "Unknown");
+  }
+  function feeBadge(c){
+    return c.designer_fee === "Paid"
+      ? badge("good", "✓ Paid" + (c.fee_date ? " · " + fmtDate(c.fee_date) : ""))
+      : badge("warn", "Unpaid · $25");
+  }
+
+  /* ---------- Needs Attention logic ---------- */
+  function attentionReasons(c){
+    const r = [];
+    const paid = c.invoice_status === "Paid";
+    const liveYes = c.ad_live === "Yes";
+    const screenOff = c.ad_live === "On playlist — screen off";
+    if (c.agreement_status === "Cancelled") {
+      if (paid && !liveYes) r.push({ sev:2, text:"Agreement cancelled but the invoice was paid — check this one" });
+    } else {
+      if (paid && screenOff) r.push({ sev:1, text:"Paid — the ad is on the playlist, but the TV screen is off" });
+      else if (paid && !liveYes) r.push({ sev:1, text:"Paid but the ad is not live on TV" });
+      if (c.ad_created === "Yes" && !liveYes && !screenOff) r.push({ sev:2, text:"Ad created but not live on TV" });
+      if (c.instructions_received === "Yes" && c.ad_created !== "Yes") r.push({ sev:3, text:"Instructions received but the ad has not been created" });
+      if (c.agreement_status === "Signed" && ["Overdue","Sent–unpaid","Not sent"].includes(c.invoice_status))
+        r.push({ sev:4, text:"Signed but the invoice is not paid (" + String(c.invoice_status).toLowerCase() + ")" });
+      if (c.stall_point && /no email contact/i.test(c.stall_point)) r.push({ sev:5, text:"No email contact at all — no welcome email was ever sent" });
+      if (liveYes && c.designer_fee !== "Paid") r.push({ sev:6, text:"Ad is live but the $25 designer fee is unpaid" });
+      if (c.agreement_status === "Signed" && c.invoice_status === "Unknown") r.push({ sev:7, text:"Signed — invoice payment not verified yet" });
+    }
+    if (c.stall_point && !/no email contact/i.test(c.stall_point)) r.push({ sev:8, text:"Stall point: " + c.stall_point });
+    return r.sort((a,b) => a.sev - b.sev);
+  }
+
+  /* ---------- Filtering ---------- */
+  function stageMatch(c){
+    if (stage === "all") return true;
+    if (stage === "paidnotlive") return c.invoice_status === "Paid" && c.ad_live !== "Yes";
+    if (stage === "notlive") return c.ad_live !== "Yes";
+    if (stage === "screenoff") return c.ad_live === "On playlist — screen off";
+    if (stage === "unpaid") return c.designer_fee === "Unpaid";
+    return true;
+  }
+  function commonMatch(c){
+    if (accountFilter !== "all" && c.account !== accountFilter) return false;
+    if (locationFilter !== "all" && !(c.locations || []).includes(locationFilter)) return false;
+    if (query) {
+      const hay = (c.business + " " + (c.contact || "") + " " + (c.email || "")).toLowerCase();
+      if (!hay.includes(query)) return false;
+    }
+    return stageMatch(c);
+  }
+
+  /* ---------- Rendering ---------- */
+  function cardHTML(c, reasons){
+    const links = [
+      c.phone ? `<a href="tel:${esc(String(c.phone).replace(/[^\d+]/g,""))}">📞 ${esc(c.phone)}</a>` : "",
+      c.email ? `<a href="mailto:${esc(c.email)}">✉️ ${esc(c.email)}</a>` : ""
+    ].join("");
+    const locs = (c.locations && c.locations.length)
+      ? `<div class="chips">${c.locations.map(l => `<span class="chip">📺 ${esc(l)}</span>`).join("")}</div>`
+      : `<span class="muted">None yet</span>`;
+    const reasonsHTML = reasons && reasons.length
+      ? `<div class="reasons"><strong>Needs attention</strong><ul>${reasons.map(x => `<li>${esc(x.text)}</li>`).join("")}</ul></div>`
+      : "";
+    const stallHTML = (!reasons && c.stall_point)
+      ? `<div class="stall">⚠ Stall point: ${esc(c.stall_point)}</div>` : "";
+    return `
+      <article class="card">
+        <div class="card-body">
+          ${reasonsHTML}
+          <div>
+            <h3>${esc(c.business) || "<span class='muted'>(No name)</span>"}</h3>
+            ${c.contact ? `<div class="contact">Contact: ${esc(c.contact)}</div>` : ""}
+          </div>
+          ${links ? `<div class="links">${links}</div>` : ""}
+          ${stallHTML}
+          <div class="checks">
+            <div class="check"><span>Agreement</span>${agreementBadge(c.agreement_status)}</div>
+            <div class="check"><span>Invoice</span>${invoiceBadge(c.invoice_status)}</div>
+            <div class="check"><span>Welcome email sent</span>${yesNoBadge(c.welcome_sent)}</div>
+            <div class="check"><span>Instructions received</span>${yesNoBadge(c.instructions_received)}</div>
+            <div class="check"><span>Ad created</span>${yesNoBadge(c.ad_created)}</div>
+            <div class="check"><span>Ad live on TV</span>${liveBadge(c.ad_live)}</div>
+          </div>
+          <dl class="facts">
+            <dt>Account</dt><dd>${esc(c.account || "AdSync")}</dd>
+            ${c.contracts ? `<dt>Contracts</dt><dd>${esc(c.contracts)}</dd>` : ""}
+            ${c.amount ? `<dt>Amount</dt><dd>$${esc(String(c.amount).replace(/^\$/, ""))}</dd>` : ""}
+            <dt>Ad type</dt><dd>${esc(c.ad_type)} · ${esc(c.ad_source)}</dd>
+            <dt>Designer fee</dt><dd>${feeBadge(c)}</dd>
+            <dt>Locations</dt><dd>${locs}</dd>
+          </dl>
+          ${c.notes ? `<div class="notes">${esc(c.notes)}</div>` : ""}
+        </div>
+        <div class="card-actions">
+          <button class="btn" data-edit="${c.id}">✏️ Edit</button>
+          <button class="btn danger" data-del="${c.id}">🗑 Delete</button>
+        </div>
+      </article>`;
+  }
+
+  function render(){
+    const total = customers.length;
+    const signed = customers.filter(c => c.agreement_status === "Signed").length;
+    const live = customers.filter(c => c.ad_live === "Yes").length;
+    const paidNotLive = customers.filter(c => c.invoice_status === "Paid" && c.ad_live !== "Yes").length;
+    const unpaidFees = customers.filter(c => c.designer_fee === "Unpaid");
+    $("sTotal").textContent = total;
+    $("sSigned").textContent = signed;
+    $("sLive").textContent = live;
+    $("sPaidNotLive").textContent = paidNotLive;
+    $("sUnpaid").textContent = unpaidFees.length + " · $" + (unpaidFees.length * 25);
+
+    const attention = customers
+      .map(c => ({ c, reasons: attentionReasons(c) }))
+      .filter(x => x.reasons.length > 0)
+      .sort((a,b) => (a.reasons[0].sev - b.reasons[0].sev) || a.c.business.localeCompare(b.c.business, undefined, { sensitivity:"base" }));
+    $("cAttention").textContent = `(${attention.length})`;
+    $("cAll").textContent = `(${total})`;
+
+    document.querySelectorAll(".viewtabs button").forEach(b => b.classList.toggle("on", b.dataset.view === view));
+    document.querySelectorAll("[data-stage]").forEach(b => b.classList.toggle("on", b.dataset.stage === stage));
+
+    // keep the location filter options current
+    const allLocs = [...new Set(customers.flatMap(c => c.locations || []))].sort();
+    const lf = $("locationFilter");
+    const keep = lf.value;
+    lf.innerHTML = `<option value="all">All locations</option>` + allLocs.map(l => `<option ${l === keep ? "selected" : ""}>${esc(l)}</option>`).join("");
+    lf.value = [...lf.options].some(o => o.value === keep) ? keep : "all";
+    locationFilter = lf.value;
+    $("locList").innerHTML = allLocs.map(l => `<option value="${esc(l)}">`).join("");
+
+    let html;
+    if (view === "attention") {
+      const list = attention.filter(x => commonMatch(x.c));
+      html = list.length
+        ? list.map(x => cardHTML(x.c, x.reasons)).join("")
+        : `<div class="empty-state"><strong>Nothing needs attention here.</strong>${attention.length ? "Try clearing the search or filters." : "Every customer is moving. 🎉"}</div>`;
+    } else {
+      const list = customers.filter(commonMatch).sort((a,b) => a.business.localeCompare(b.business, undefined, { sensitivity:"base" }));
+      html = list.length
+        ? list.map(c => cardHTML(c, null)).join("")
+        : `<div class="empty-state"><strong>${total ? "No customers match." : "No customers yet."}</strong>${total ? "Try a different search or filter." : "Click “Add Customer” to get started."}</div>`;
+    }
+    $("grid").innerHTML = html;
+  }
+
+  /* ---------- Data (Supabase) ---------- */
+  async function loadCustomers(){
+    showAppError("");
+    const { data, error } = await sb.from(TABLE).select("*").order("business", { ascending: true });
+    if (error) { showAppError("Couldn't load customers: " + error.message); return; }
+    customers = (data || []).map(r => ({ ...blank(), ...r, locations: Array.isArray(r.locations) ? r.locations : [] }));
+    render();
+  }
+
+  /* ---------- Form ---------- */
+  function renderLocChips(){
+    $("locChips").innerHTML = formLocations.length
+      ? formLocations.map((l,i) => `<span class="chip">📺 ${esc(l)} <button type="button" data-rmloc="${i}" aria-label="Remove ${esc(l)}">×</button></span>`).join("")
+      : `<span class="muted" style="font-size:14px">No locations added yet.</span>`;
+  }
+  function addLocationsFromInput(){
+    const input = $("fLocInput");
+    input.value.split(/[;\n]/).map(s => s.trim()).filter(Boolean)
+      .forEach(p => { if (!formLocations.some(l => l.toLowerCase() === p.toLowerCase())) formLocations.push(p); });
+    input.value = ""; renderLocChips();
+  }
+  function syncFeeDate(){
+    const paid = $("fFee").value === "Paid";
+    $("fFeeDate").disabled = !paid;
+    if (paid && !$("fFeeDate").value) $("fFeeDate").value = today();
+    if (!paid) $("fFeeDate").value = "";
+  }
+
+  function openForm(c){
+    editingId = c ? c.id : null;
+    const d = c || blank();
+    $("formTitle").textContent = c ? "Edit Customer" : "Add Customer";
+    $("fBusiness").value = d.business || ""; $("fContact").value = d.contact || "";
+    $("fPhone").value = d.phone || ""; $("fEmail").value = d.email || "";
+    $("fAccount").value = d.account || "AdSync"; $("fAmount").value = d.amount || "";
+    $("fAgreement").value = d.agreement_status || "Not sent"; $("fInvoice").value = d.invoice_status || "Unknown";
+    $("fContracts").value = d.contracts || "";
+    $("fWelcome").value = d.welcome_sent || "Unknown"; $("fInstructions").value = d.instructions_received || "Unknown";
+    $("fCreated").value = d.ad_created || "No"; $("fLive").value = d.ad_live || "Unknown";
+    $("fStall").value = d.stall_point || "";
+    $("fType").value = d.ad_type || "Still"; $("fSource").value = d.ad_source || "We create";
+    $("fFee").value = d.designer_fee || "Unpaid"; $("fFeeDate").value = d.fee_date || "";
+    $("fFeeDate").disabled = d.designer_fee !== "Paid";
+    $("fNotes").value = d.notes || "";
+    $("fLocInput").value = "";
+    formLocations = [...(d.locations || [])]; renderLocChips();
+    openOverlay("formOverlay");
+    setTimeout(() => $("fBusiness").focus(), 50);
+  }
+
+  async function saveForm(e){
+    e.preventDefault();
+    const business = $("fBusiness").value.trim();
+    if (!business) { $("fBusiness").focus(); toast("Please enter a business name."); return; }
+    addLocationsFromInput();
+    const rec = {
+      business, contact: $("fContact").value.trim(), phone: $("fPhone").value.trim(), email: $("fEmail").value.trim(),
+      account: $("fAccount").value, amount: $("fAmount").value.trim(),
+      agreement_status: $("fAgreement").value, invoice_status: $("fInvoice").value, contracts: $("fContracts").value.trim(),
+      welcome_sent: $("fWelcome").value, instructions_received: $("fInstructions").value,
+      ad_created: $("fCreated").value, ad_live: $("fLive").value, stall_point: $("fStall").value.trim(),
+      ad_type: $("fType").value, ad_source: $("fSource").value,
+      designer_fee: $("fFee").value, fee_date: $("fFee").value === "Paid" ? $("fFeeDate").value : "",
+      locations: [...formLocations], notes: $("fNotes").value.trim()
+    };
+    let error;
+    if (editingId) ({ error } = await sb.from(TABLE).update(rec).eq("id", editingId));
+    else ({ error } = await sb.from(TABLE).insert(rec));
+    if (error) { toast("Couldn't save: " + error.message); return; }
+    closeOverlay("formOverlay");
+    await loadCustomers();
+    toast(editingId ? "Changes saved." : "Customer added.");
+  }
+
+  /* ---------- Overlays ---------- */
+  function openOverlay(id){ $(id).classList.add("open"); document.body.style.overflow = "hidden"; }
+  function closeOverlay(id){
+    $(id).classList.remove("open");
+    if (!document.querySelector(".overlay.open")) document.body.style.overflow = "";
+  }
+
+  /* ---------- Backup (against backend data) ---------- */
+  async function exportData(){
+    const payload = { app: "Art Team Oversight Dashboard", version: 2, exportedAt: new Date().toISOString(),
+      customers: customers.map(c => { const o = {}; COLUMNS.forEach(k => o[k] = c[k]); o.id = c.id; return o; }) };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `art-team-backup-${today()}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast(`Backup downloaded (${customers.length} customers).`);
+  }
+
+  async function importData(file){
+    try {
+      const data = JSON.parse(await file.text());
+      if (!data || !Array.isArray(data.customers)) throw new Error("bad file");
+      if (!confirm(`Restore this backup?\n\nIt has ${data.customers.length} customer(s) and will REPLACE the ${customers.length} customer(s) currently in the shared dashboard — for everyone.`)) return;
+      const { error: delErr } = await sb.from(TABLE).delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      if (delErr) throw delErr;
+      const rows = data.customers.map(raw => {
+        const rec = { ...blank() };
+        COLUMNS.forEach(k => { if (raw[k] !== undefined) rec[k] = raw[k]; });
+        rec.locations = Array.isArray(rec.locations) ? rec.locations : [];
+        if (raw.id) rec.id = raw.id;
+        return rec;
+      });
+      for (let i = 0; i < rows.length; i += 200) {
+        const { error } = await sb.from(TABLE).insert(rows.slice(i, i + 200));
+        if (error) throw error;
+      }
+      view = "all"; stage = "all"; query = ""; $("search").value = "";
+      await loadCustomers();
+      toast(`Backup restored (${rows.length} customers).`);
+    } catch (err) { console.error(err); toast("Import failed: " + (err.message || "that file isn't a valid dashboard backup.")); }
+  }
+
+  /* ---------- Auth ---------- */
+  function showLogin(){
+    $("appView").hidden = true;
+    $("loginView").hidden = false;
+    if (!CONFIG_OK) { $("configErr").hidden = false; $("loginBtn").disabled = true; }
+  }
+  async function enterApp(user){
+    $("loginView").hidden = true;
+    $("appView").hidden = false;
+    $("whoami").textContent = user && user.email ? user.email : "";
+    await loadCustomers();
+  }
+
+  $("loginForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!sb) return;
+    $("loginErr").hidden = true;
+    $("loginBtn").disabled = true;
+    const { data, error } = await sb.auth.signInWithPassword({
+      email: $("liEmail").value.trim(), password: $("liPassword").value
+    });
+    $("loginBtn").disabled = false;
+    if (error) {
+      $("loginErr").hidden = false;
+      $("loginErr").textContent = "Couldn't sign in: " + error.message;
+      return;
+    }
+    if (data && data.user) enterApp(data.user);
+  });
+  $("signOutBtn").addEventListener("click", async () => { if (sb) await sb.auth.signOut(); showLogin(); });
+
+  /* ---------- Events ---------- */
+  $("addBtn").addEventListener("click", () => openForm(null));
+  $("refreshBtn").addEventListener("click", async () => { await loadCustomers(); toast("Refreshed — you're seeing the latest shared data."); });
+  $("exportBtn").addEventListener("click", exportData);
+  $("importBtn").addEventListener("click", () => $("importFile").click());
+  $("importFile").addEventListener("change", e => { const f = e.target.files[0]; if (f) importData(f); e.target.value = ""; });
+
+  $("search").addEventListener("input", e => { query = e.target.value.trim().toLowerCase(); render(); });
+  document.querySelectorAll(".viewtabs button").forEach(b => b.addEventListener("click", () => { view = b.dataset.view; render(); }));
+  document.querySelectorAll("[data-stage]").forEach(b => b.addEventListener("click", () => { stage = b.dataset.stage; render(); }));
+  document.querySelectorAll("[data-jump]").forEach(b => b.addEventListener("click", () => {
+    const j = b.dataset.jump;
+    if (j === "attention") { view = "attention"; }
+    else { view = "all"; stage = j === "notlive" ? "notlive" : (j === "unpaid" ? "unpaid" : "all"); }
+    render();
+  }));
+  $("accountFilter").addEventListener("change", e => { accountFilter = e.target.value; render(); });
+  $("locationFilter").addEventListener("change", e => { locationFilter = e.target.value; render(); });
+
+  $("grid").addEventListener("click", async e => {
+    const edit = e.target.closest("[data-edit]"), del = e.target.closest("[data-del]");
+    if (edit) openForm(customers.find(c => c.id === edit.dataset.edit));
+    if (del) {
+      const c = customers.find(x => x.id === del.dataset.del);
+      if (c && confirm(`Delete "${c.business}"?\n\nThis removes the customer from the shared dashboard for everyone. It can't be undone (unless you have a backup).`)) {
+        const { error } = await sb.from(TABLE).delete().eq("id", c.id);
+        if (error) { toast("Couldn't delete: " + error.message); return; }
+        await loadCustomers();
+        toast("Customer deleted.");
+      }
+    }
+  });
+
+  $("form").addEventListener("submit", saveForm);
+  document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => closeOverlay(b.closest(".overlay").id)));
+  document.querySelectorAll(".overlay").forEach(o => o.addEventListener("mousedown", e => { if (e.target === o) closeOverlay(o.id); }));
+  document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".overlay.open").forEach(o => closeOverlay(o.id)); });
+
+  $("addLoc").addEventListener("click", addLocationsFromInput);
+  $("fLocInput").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addLocationsFromInput(); } });
+  $("locChips").addEventListener("click", e => { const b = e.target.closest("[data-rmloc]"); if (b) { formLocations.splice(+b.dataset.rmloc, 1); renderLocChips(); } });
+  $("fFee").addEventListener("change", syncFeeDate);
+
+  /* ---------- Start ---------- */
+  (async function init(){
+    if (!sb) { showLogin(); return; }
+    const { data } = await sb.auth.getSession();
+    if (data && data.session) enterApp(data.session.user); else showLogin();
+    sb.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") showLogin();
+      else if (event === "SIGNED_IN" && session && $("appView").hidden) enterApp(session.user);
+    });
+  })();
+})();
+</script>
+</body>
+</html>
