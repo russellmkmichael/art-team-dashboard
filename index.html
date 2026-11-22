@@ -169,6 +169,20 @@
     </div>
     <button type="submit" class="btn primary" id="loginBtn" style="width:100%;justify-content:center">Sign In</button>
   </form>
+  <form class="login-card" id="pwForm" hidden novalidate>
+    <h1>Set your new password</h1>
+    <p>You came in from a password-reset link. Choose the password you'll use for this dashboard from now on.</p>
+    <div class="login-err" id="pwErr" hidden></div>
+    <div class="field">
+      <label for="pwNew">New password</label>
+      <input id="pwNew" type="password" autocomplete="new-password" required>
+    </div>
+    <div class="field">
+      <label for="pwConfirm">Type it again</label>
+      <input id="pwConfirm" type="password" autocomplete="new-password" required>
+    </div>
+    <button type="submit" class="btn primary" id="pwBtn" style="width:100%;justify-content:center">Save password</button>
+  </form>
 </div>
 
 <!-- ============ APP ============ -->
@@ -662,6 +676,8 @@
   function showLogin(){
     $("appView").hidden = true;
     $("loginView").hidden = false;
+    $("loginForm").hidden = false;
+    $("pwForm").hidden = true;
     if (!CONFIG_OK) { $("configErr").hidden = false; $("loginBtn").disabled = true; }
   }
   async function enterApp(user){
@@ -688,6 +704,35 @@
     if (data && data.user) enterApp(data.user);
   });
   $("signOutBtn").addEventListener("click", async () => { if (sb) await sb.auth.signOut(); showLogin(); });
+
+  /* ---------- Password recovery ---------- */
+  let recoveryPending = false;
+  function showSetPassword(){
+    $("appView").hidden = true;
+    $("loginView").hidden = false;
+    $("loginForm").hidden = true;
+    $("pwForm").hidden = false;
+    $("pwErr").hidden = true;
+    setTimeout(() => { const f = $("pwNew"); if (f) f.focus(); }, 50);
+  }
+  $("pwForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!sb) return;
+    const p1 = $("pwNew").value, p2 = $("pwConfirm").value;
+    $("pwErr").hidden = true;
+    if (p1.length < 6) { $("pwErr").hidden = false; $("pwErr").textContent = "Password needs at least 6 characters."; return; }
+    if (p1 !== p2) { $("pwErr").hidden = false; $("pwErr").textContent = "The two passwords don't match — type the same one twice."; return; }
+    $("pwBtn").disabled = true;
+    const { data, error } = await sb.auth.updateUser({ password: p1 });
+    $("pwBtn").disabled = false;
+    if (error) { $("pwErr").hidden = false; $("pwErr").textContent = "Couldn't save: " + error.message; return; }
+    recoveryPending = false;
+    if (window.history && window.history.replaceState) window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    $("pwForm").hidden = true;
+    $("loginForm").hidden = false;
+    toast("Password saved — that's your dashboard password from now on.");
+    if (data && data.user) enterApp(data.user);
+  });
 
   /* ---------- Events ---------- */
   $("addBtn").addEventListener("click", () => openForm(null));
@@ -735,11 +780,14 @@
   /* ---------- Start ---------- */
   (async function init(){
     if (!sb) { showLogin(); return; }
+    recoveryPending = /type=recovery/.test(window.location.hash || "");
     const { data } = await sb.auth.getSession();
-    if (data && data.session) enterApp(data.session.user); else showLogin();
+    if (data && data.session) { if (recoveryPending) showSetPassword(); else enterApp(data.session.user); }
+    else showLogin();
     sb.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_OUT") showLogin();
-      else if (event === "SIGNED_IN" && session && $("appView").hidden) enterApp(session.user);
+      if (event === "PASSWORD_RECOVERY") { recoveryPending = true; showSetPassword(); }
+      else if (event === "SIGNED_OUT") showLogin();
+      else if (event === "SIGNED_IN" && session && $("appView").hidden) { if (recoveryPending) showSetPassword(); else enterApp(session.user); }
     });
   })();
 })();
