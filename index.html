@@ -333,7 +333,7 @@
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzeGpxb3RneW9pemNsdmZocmdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzMTE2NTEsImV4cCI6MjExMDg4NzY1MX0.fQ8-zoAlzjwxOWbcjsY9LVaOfJMVkZz-50K8IMfUEBo";
   /* ========================================================================== */
 
-  const CONFIG_OK = SUPABASE_URL !== "https://esxjqotgyoizclvfhrgr.supabase.co" && SUPABASE_ANON_KEY !== "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzeGpxb3RneW9pemNsdmZocmdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzMTE2NTEsImV4cCI6MjExMDg4NzY1MX0.fQ8-zoAlzjwxOWbcjsY9LVaOfJMVkZz-50K8IMfUEBo"
+  const CONFIG_OK = SUPABASE_URL !== "PASTE_PROJECT_URL" && SUPABASE_ANON_KEY !== "PASTE_ANON_KEY"
     && /^https:\/\/.+\.supabase\.co/.test(SUPABASE_URL);
   let sb = null;
   if (CONFIG_OK && window.supabase) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
