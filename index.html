@@ -148,6 +148,12 @@
     .filters{width:100%}
     .filters button{flex:1}
   }
+  .adfile { margin-top:10px; }
+  .adfile img, .adfile video { width:100%; border-radius:10px; display:block; background:#000; }
+  .adfile .adfile-name { font-size:.82rem; opacity:.75; margin-top:6px; word-break:break-all; }
+  .filebox { border:1px dashed rgba(127,127,127,.55); border-radius:10px; padding:10px 12px; margin-top:14px; }
+  .filebox .filebox-name { font-size:.9rem; word-break:break-all; margin-top:4px; }
+  .filebox img, .filebox video { width:100%; border-radius:8px; margin-top:8px; background:#000; }
 </style>
 </head>
 <body>
@@ -300,6 +306,15 @@
           <div class="field"><label for="fType">Ad type</label><select id="fType"><option>Still</option><option>Video</option></select></div>
           <div class="field"><label for="fSource">Ad source</label><select id="fSource"><option>We create</option><option>Customer provided</option></select></div>
         </div>
+        <div class="filebox">
+          <label for="fAdFile">Ad file <span class="hint">— the actual ad, saved with this customer (image or video, up to 50 MB)</span></label>
+          <div class="filebox-name" id="fAdCurrent">No file saved yet.</div>
+          <div id="fAdPreview"></div>
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input type="file" id="fAdFile" accept="image/*,video/*" style="flex:1;min-width:200px">
+            <button type="button" class="btn small danger" id="fAdRemove" hidden>Remove file</button>
+          </div>
+        </div>
         <div class="field" style="margin-top:14px">
           <label for="fLocInput">TV locations <span class="hint">— type a location, then press Enter or Add</span></label>
           <div class="loc-entry">
@@ -355,7 +370,8 @@
   const TABLE = "customers";
   const COLUMNS = ["business","contact","email","phone","locations","account","contracts",
     "agreement_status","invoice_status","amount","welcome_sent","instructions_received",
-    "ad_created","ad_live","ad_type","ad_source","designer_fee","fee_date","stall_point","notes"];
+    "ad_created","ad_live","ad_type","ad_source","designer_fee","fee_date","stall_point","notes",
+    "ad_file_path","ad_file_name"];
 
   /* ---------- State ---------- */
   let customers = [];
@@ -366,6 +382,8 @@
   let locationFilter = "all";
   let editingId = null;
   let formLocations = [];
+  let adUrls = {};
+  let formAdPath = "", formAdName = "", formAdRemove = false;
 
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
@@ -387,7 +405,7 @@
       contracts:"", agreement_status:"Not sent", invoice_status:"Unknown", amount:"",
       welcome_sent:"Unknown", instructions_received:"Unknown", ad_created:"No",
       ad_live:"Unknown", ad_type:"Still", ad_source:"We create",
-      designer_fee:"Unpaid", fee_date:"", stall_point:"", notes:"" };
+      designer_fee:"Unpaid", fee_date:"", stall_point:"", notes:"", ad_file_path:"", ad_file_name:"" };
   }
 
   /* ---------- Badges ---------- */
@@ -499,6 +517,7 @@
             <dt>Designer fee</dt><dd>${feeBadge(c)}</dd>
             <dt>Locations</dt><dd>${locs}</dd>
           </dl>
+          ${adFileHTML(c)}
           ${c.notes ? `<div class="notes">${esc(c.notes)}</div>` : ""}
         </div>
         <div class="card-actions">
@@ -506,6 +525,29 @@
           <button class="btn danger" data-del="${c.id}">🗑 Delete</button>
         </div>
       </article>`;
+  }
+
+  /* ---------- Ad files (Supabase Storage) ---------- */
+  const AD_BUCKET = "ads";
+  const isImagePath = p => /\.(png|jpe?g|gif|webp|avif)$/i.test(p || "");
+  const isVideoPath = p => /\.(mp4|webm|mov|m4v)$/i.test(p || "");
+  async function signedAdUrl(path){
+    if (!path) return "";
+    if (adUrls[path]) return adUrls[path];
+    const { data, error } = await sb.storage.from(AD_BUCKET).createSignedUrl(path, 3600);
+    if (error || !data) return "";
+    adUrls[path] = data.signedUrl;
+    return data.signedUrl;
+  }
+  function adFileHTML(c){
+    if (!c.ad_file_path) return "";
+    const url = adUrls[c.ad_file_path];
+    const name = esc(c.ad_file_name || "Ad file");
+    let media = "";
+    if (url && isImagePath(c.ad_file_path)) media = `<img src="${esc(url)}" alt="${name}" loading="lazy">`;
+    else if (url && isVideoPath(c.ad_file_path)) media = `<video src="${esc(url)}" controls preload="metadata" playsinline></video>`;
+    const label = url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${name}</a>` : name;
+    return `<div class="adfile">${media}<div class="adfile-name">📎 ${label}</div></div>`;
   }
 
   function render(){
@@ -560,6 +602,7 @@
     const { data, error } = await sb.from(TABLE).select("*").order("business", { ascending: true });
     if (error) { showAppError("Couldn't load customers: " + error.message); return; }
     customers = (data || []).map(r => ({ ...blank(), ...r, locations: Array.isArray(r.locations) ? r.locations : [] }));
+    await Promise.all(customers.filter(c => c.ad_file_path).map(c => signedAdUrl(c.ad_file_path)));
     render();
   }
 
@@ -598,10 +641,27 @@
     $("fFee").value = d.designer_fee || "Unpaid"; $("fFeeDate").value = d.fee_date || "";
     $("fFeeDate").disabled = d.designer_fee !== "Paid";
     $("fNotes").value = d.notes || "";
+    formAdPath = d.ad_file_path || ""; formAdName = d.ad_file_name || ""; formAdRemove = false;
+    $("fAdFile").value = "";
+    renderAdFormBox();
     $("fLocInput").value = "";
     formLocations = [...(d.locations || [])]; renderLocChips();
     openOverlay("formOverlay");
     setTimeout(() => $("fBusiness").focus(), 50);
+  }
+
+  function renderAdFormBox(){
+    const cur = $("fAdCurrent"), prev = $("fAdPreview"), rm = $("fAdRemove");
+    const picked = $("fAdFile").files && $("fAdFile").files[0];
+    if (picked) { cur.textContent = "Will upload on save: " + picked.name + (formAdPath ? " (replaces the saved file)" : ""); prev.innerHTML = ""; rm.hidden = true; return; }
+    if (formAdRemove) { cur.textContent = "The saved file will be removed when you save."; prev.innerHTML = ""; rm.hidden = true; return; }
+    if (!formAdPath) { cur.textContent = "No file saved yet."; prev.innerHTML = ""; rm.hidden = true; return; }
+    cur.textContent = "Saved: " + (formAdName || "ad file");
+    rm.hidden = false;
+    const url = adUrls[formAdPath];
+    if (url && isImagePath(formAdPath)) prev.innerHTML = `<img src="${esc(url)}" alt="">`;
+    else if (url && isVideoPath(formAdPath)) prev.innerHTML = `<video src="${esc(url)}" controls preload="metadata" playsinline></video>`;
+    else prev.innerHTML = "";
   }
 
   async function saveForm(e){
@@ -619,13 +679,42 @@
       designer_fee: $("fFee").value, fee_date: $("fFee").value === "Paid" ? $("fFeeDate").value : "",
       locations: [...formLocations], notes: $("fNotes").value.trim()
     };
-    let error;
+    let error, savedId = editingId;
     if (editingId) ({ error } = await sb.from(TABLE).update(rec).eq("id", editingId));
-    else ({ error } = await sb.from(TABLE).insert(rec));
+    else {
+      const ins = await sb.from(TABLE).insert(rec).select("id");
+      error = ins.error;
+      if (!error && ins.data && ins.data[0]) savedId = ins.data[0].id;
+    }
     if (error) { toast("Couldn't save: " + error.message); return; }
+    /* Ad file: upload a newly picked file, and/or remove the saved one. */
+    let fileNote = "";
+    const pickedFile = $("fAdFile").files && $("fAdFile").files[0];
+    try {
+      if (pickedFile) {
+        if (pickedFile.size > 50 * 1024 * 1024) fileNote = " (Ad file skipped — over the 50 MB limit.)";
+        else if (!savedId) fileNote = " (Ad file not saved — please edit the customer and attach it again.)";
+        else {
+          const safe = pickedFile.name.replace(/[^\w.\-]+/g, "_");
+          const path = savedId + "/" + Date.now() + "-" + safe;
+          const up = await sb.storage.from(AD_BUCKET).upload(path, pickedFile, { upsert: false, contentType: pickedFile.type || undefined });
+          if (up.error) fileNote = " (Ad file didn't upload: " + up.error.message + ")";
+          else {
+            if (formAdPath && formAdPath !== path) { await sb.storage.from(AD_BUCKET).remove([formAdPath]); delete adUrls[formAdPath]; }
+            await sb.from(TABLE).update({ ad_file_path: path, ad_file_name: pickedFile.name }).eq("id", savedId);
+            fileNote = " Ad file saved.";
+          }
+        }
+      } else if (formAdRemove && formAdPath && savedId) {
+        await sb.storage.from(AD_BUCKET).remove([formAdPath]);
+        delete adUrls[formAdPath];
+        await sb.from(TABLE).update({ ad_file_path: null, ad_file_name: null }).eq("id", savedId);
+        fileNote = " Ad file removed.";
+      }
+    } catch (err) { fileNote = " (Ad file problem: " + (err.message || err) + ")"; }
     closeOverlay("formOverlay");
     await loadCustomers();
-    toast(editingId ? "Changes saved." : "Customer added.");
+    toast((editingId ? "Changes saved." : "Customer added.") + fileNote);
   }
 
   /* ---------- Overlays ---------- */
@@ -761,6 +850,7 @@
       if (c && confirm(`Delete "${c.business}"?\n\nThis removes the customer from the shared dashboard for everyone. It can't be undone (unless you have a backup).`)) {
         const { error } = await sb.from(TABLE).delete().eq("id", c.id);
         if (error) { toast("Couldn't delete: " + error.message); return; }
+        if (c.ad_file_path) { await sb.storage.from(AD_BUCKET).remove([c.ad_file_path]); delete adUrls[c.ad_file_path]; }
         await loadCustomers();
         toast("Customer deleted.");
       }
@@ -776,6 +866,8 @@
   $("fLocInput").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addLocationsFromInput(); } });
   $("locChips").addEventListener("click", e => { const b = e.target.closest("[data-rmloc]"); if (b) { formLocations.splice(+b.dataset.rmloc, 1); renderLocChips(); } });
   $("fFee").addEventListener("change", syncFeeDate);
+  $("fAdRemove").addEventListener("click", () => { formAdRemove = true; $("fAdFile").value = ""; renderAdFormBox(); });
+  $("fAdFile").addEventListener("change", () => { if ($("fAdFile").files && $("fAdFile").files[0]) formAdRemove = false; renderAdFormBox(); });
 
   /* ---------- Start ---------- */
   (async function init(){
