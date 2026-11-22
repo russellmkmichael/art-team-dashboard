@@ -149,6 +149,8 @@
     .filters button{flex:1}
   }
   .adfile { margin-top:10px; }
+  .adfile-empty { border:1px dashed rgba(127,127,127,.55); border-radius:10px; padding:10px 12px; }
+  .adfile-empty .btn { margin-top:6px; }
   .adfile img, .adfile video { width:100%; border-radius:10px; display:block; background:#000; }
   .adfile .adfile-name { font-size:.82rem; opacity:.75; margin-top:6px; word-break:break-all; }
   .filebox { border:1px dashed rgba(127,127,127,.55); border-radius:10px; padding:10px 12px; margin-top:14px; }
@@ -540,7 +542,7 @@
     return data.signedUrl;
   }
   function adFileHTML(c){
-    if (!c.ad_file_path) return "";
+    if (!c.ad_file_path) return `<div class="adfile adfile-empty"><div class="adfile-name">🎬 No ad file saved yet.</div><button class="btn small" data-edit-ad="${c.id}">＋ Add ad file</button></div>`;
     const url = adUrls[c.ad_file_path];
     const name = esc(c.ad_file_name || "Ad file");
     let media = "";
@@ -844,6 +846,11 @@
 
   $("grid").addEventListener("click", async e => {
     const edit = e.target.closest("[data-edit]"), del = e.target.closest("[data-del]");
+    const editAd = e.target.closest("[data-edit-ad]");
+    if (editAd) {
+      const c = customers.find(x => x.id === editAd.dataset.editAd);
+      if (c) { openForm(c); setTimeout(() => { const f = $("fAdFile"); if (f) f.scrollIntoView({ block: "center" }); }, 150); }
+    }
     if (edit) openForm(customers.find(c => c.id === edit.dataset.edit));
     if (del) {
       const c = customers.find(x => x.id === del.dataset.del);
